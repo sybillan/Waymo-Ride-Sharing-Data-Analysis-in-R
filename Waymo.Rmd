@@ -1,0 +1,139 @@
+---
+title: "Waymo Analysis"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2) 
+library(dplyr)
+```
+
+
+
+```{r}
+
+RDF<-read.csv("sample trip data v1.csv")
+str(RDF)
+
+
+```
+
+
+```{r}
+RDF$trip_start_time<-as.POSIXct(RDF$trip_start_time,format="%m/%d/%y %H:%M")
+RDF$trip_end_time<-as.POSIXct(RDF$trip_end_time,format="%m/%d/%y %H:%M")
+RDF$duration<-(RDF$trip_end_time-RDF$trip_start_time)
+RDF$time_diff<-RDF$trip_duration_mins-RDF$duration
+RDF[(RDF$time_diff>1),]
+str(RDF)
+```
+
+```{r}
+
+```
+
+```{r}
+RDF[rowSums(is.na(RDF)) > 0,]
+```
+
+```{r,out.width='130%'}
+
+
+new<-RDF %>% group_by(service_provider) %>% count(pickup_neighborhood, sort=TRUE) %>% slice_max(n, n=5) 
+ggplot(data = new, aes(pickup_neighborhood, group="1")) +
+  geom_bar(aes(y=n),stat="identity")+
+  labs(title = "",
+       y = "Frequency of Pickup Trips", x = "Neighborhood") + 
+  facet_grid(~service_provider) +aes(fill = as.factor(service_provider))
+
+
+new<-RDF %>% group_by(service_provider) %>% count(dropoff_neighborhood, sort=TRUE) %>% slice_max(n, n=5) 
+ggplot(data = new, aes(dropoff_neighborhood, group="1")) +
+  geom_bar(aes(y=n),stat="identity")+
+  labs(title = "",
+       y = "Frequency of Dropoff Trips", x = "Neighborhood") + 
+  facet_grid(~service_provider)+aes(fill = as.factor(service_provider))
+
+
+
+
+new<-RDF %>% group_by(service_provider) %>% count(pickup_neighborhood, sort=TRUE) %>% slice_min(n, n=3) 
+ggplot(data = new, aes(pickup_neighborhood, group="1")) +
+  geom_bar(aes(y=n),stat="identity")+
+  labs(title = "",
+       y = "Frequency of Pickup Trips", x = "Neighborhood") + 
+  facet_grid(~service_provider) +aes(fill = as.factor(service_provider))
+
+
+new<-RDF %>% group_by(service_provider) %>% count(dropoff_neighborhood, sort=TRUE) %>% slice_min(n, n=3) 
+ggplot(data = new, aes(dropoff_neighborhood, group="1")) +
+  geom_bar(aes(y=n),stat="identity")+
+  labs(title = "",
+       y = "Frequency of Dropoff Trips", x = "Neighborhood") + 
+  facet_grid(~service_provider)+aes(fill = as.factor(service_provider))
+
+
+
+
+```
+
+
+```{r}
+
+L<-subset(RDF,service_provider=="Lannister")
+t<-lm(L$trip_price~L$trip_distance_mi+L$trip_duration_mins+L$trip_type)
+summary(t)
+cor(L$trip_distance_mi,L$trip_duration_mins)
+plot(t)
+```
+
+
+```{r}
+                 
+T<-subset(RDF,service_provider=="Targaryen")
+t1<-lm(T$trip_price~T$trip_distance_mi+T$trip_duration_mins+T$trip_type)
+summary(t1)
+cor(T$trip_distance_mi,T$trip_duration_mins)
+plot(t1)
+```
+
+
+
+
+```{r, warning=FALSE}
+                  
+ggplot() +
+  geom_smooth(aes(x = T$trip_distance, y = T$trip_price), data = T, 
+              method = "lm", se = FALSE, color = "red") + 
+  geom_smooth(aes(x = L$trip_distance, y = L$trip_price), data = L, 
+              method = "lm", se = FALSE, color = "blue") + 
+  geom_point(aes(x = T$trip_distance, y = T$trip_price), data = T, color = "red") + 
+  geom_point(aes(x = L$trip_distance, y = L$trip_price), data = L, color = "blue")+
+  scale_y_continuous(breaks = seq(30, 200, by = 30))+labs(x = "Trip Distance (miles)",y="Trip Price ($)",colour="Service Provider",title="Pricing Regression Model")
+
+
+ggplot(T,aes(x=T$trip_distance,y=T$trip_price))+
+  geom_point()+geom_smooth(method=lm,se=FALSE,fullrange=TRUE,
+                           aes(color=T$trip_type))+
+  scale_y_continuous(breaks = seq(30, 200, by = 30))+labs(x = "Trip Distance (miles)",y="Trip Price ($)",colour="Trip Type",title="Pricing Regression Model for Targaryen")
+
+
+
+
+ggplot(L,aes(x=L$trip_distance,y=L$trip_price))+
+  geom_point()+geom_smooth(method=lm,se=FALSE,fullrange=TRUE,
+                           aes(color=L$trip_type))+
+  scale_y_continuous(breaks = seq(30, 200, by = 30))+labs(x = "Trip Distance (miles)",y="Trip Price ($)",colour="Trip Type",title="Pricing Regression Model for Lannister")
+
+
+```
+
+```{r}
+
+outliers<-RDF%>%filter(row(RDF)==39414 | row(RDF)==27998 | row(RDF)==23125 | row(RDF)==45763 | row(RDF)== 56843 | row(RDF)==13934  ) 
+outliers
+```
+
